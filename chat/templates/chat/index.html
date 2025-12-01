@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nicole Chat</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23522888;'/%3E%3Cstop offset='100%25' style='stop-color:%23BF9553;'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='50' fill='url(%23grad)'/%3E%3Ctext x='50' y='55' font-family='Parisienne, cursive' font-size='80' fill='%23FDFBF7' text-anchor='middle' dominant-baseline='middle'%3EN%3C/text%3E%3C/svg%3E">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts - Parisienne and Quicksand -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Parisienne&family=Quicksand:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-brand: #522888;
+            /* Deep purple */
+            --secondary-brand: #BF9553;
+            /* Warm gold */
+            --background-light: #FDFBF7;
+            /* Warm off-white */
+            --text-dark: #4a4a4a;
+            /* Brand's dark text color */
+            --card-bg: #ffffff;
+            /* White card background */
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --border-light: #e5e7eb;
+        }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: var(--background-light);
+            color: var(--text-dark);
+            min-height: 100vh;
+            line-height: 1.6;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            letter-spacing: 0.5px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Parisienne', cursive;
+            font-weight: 400;
+            color: var(--primary-brand);
+            text-shadow: 0 1px 2px var(--shadow-light);
+        }
+        /* Custom styling for rendered markdown headings */
+        .message-bubble h1, .message-bubble h2, .message-bubble h3 {
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 700;
+            color: #4a4a4a;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .message-bubble h1 {
+            font-size: 1.5rem;
+        }
+        .message-bubble h2 {
+            font-size: 1.25rem;
+        }
+        .message-bubble h3 {
+            font-size: 1.1rem;
+        }
+        .message-bubble strong {
+            font-weight: 700;
+        }
+        .message-bubble ul {
+            list-style-type: disc;
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+        .message-bubble li {
+            margin-bottom: 0.25rem;
+        }
+
+
+        h1 {
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            letter-spacing: 1px;
+            position: relative;
+            display: inline-block;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 50%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-brand), var(--secondary-brand));
+        }
+
+        .brand-gradient-text {
+            background: linear-gradient(90deg, var(--primary-brand), var(--secondary-brand));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Message bubble animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Basic spinner for the loading indicator */
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: var(--primary-brand);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Typing indicator dots animation */
+        @keyframes pulse {
+            0% {
+                transform: translateY(0);
+            }
+
+            25% {
+                transform: translateY(-3px);
+            }
+
+            50% {
+                transform: translateY(0);
+            }
+        }
+
+        .typing-dots {
+            display: flex;
+            align-items: center;
+            height: 16px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: #A0A0A0;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: pulse 1s infinite;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        /* Placeholder animation */
+        @keyframes placeholderPulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+
+        /* Chart styling */
+        .chart-container {
+            max-width: 80%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #ffffff, #F8F8FF);
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 4px var(--shadow-light);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* Responsive styles */
+        .main-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            /* Smooth scrolling on iOS */
+        }
+
+        .chat-area .message-bubble {
+            animation: fadeIn 0.3s ease-in-out;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .chat-area .message-bubble:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px var(--shadow-light);
+        }
+
+        .chat-input-container {
+            padding: 0.75rem;
+            background-color: var(--card-bg);
+        }
+
+        .chat-input {
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 500;
+            border: 1px solid var(--border-light);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary-brand);
+            box-shadow: 0 0 8px rgba(82, 40, 136, 0.3);
+        }
+
+        .chat-input::placeholder {
+            color: #A0A0A0;
+            animation: placeholderPulse 2s infinite;
+        }
+
+        .chat-header {
+            padding: 1rem;
+        }
+
+        .history-panel {
+            width: 100%;
+            max-width: 320px;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            /* transform: translateX(100%); */
+            /* Let Tailwind handle this */
+        }
+
+        .history-item {
+            background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .history-item:hover {
+            transform: scale(1.03);
+            background: linear-gradient(135deg, #e8e8e8, #d0d0d0);
+        }
+
+        button {
+            font-family: 'Quicksand', sans-serif;
+            font-weight: 500;
+        }
+
+        /* Media Queries for smaller screens */
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .chat-input-container {
+                padding: 0.5rem;
+            }
+
+            .chat-input {
+                font-size: 0.9rem;
+                padding: 0.5rem 0.75rem;
+            }
+
+            .chat-area {
+                padding: 0.5rem;
+            }
+
+            .history-panel {
+                max-width: 100%;
+            }
+
+            .history-panel h2 {
+                font-size: 1.25rem;
+            }
+
+            button svg {
+                width: 1.25rem;
+                height: 1.25rem;
+            }
+
+            .chat-area .message-bubble {
+                padding: 0.5rem;
+            }
+
+            .chart-container {
+                max-width: 90%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            h2 {
+                font-size: 1.25rem;
+            }
+
+            .chat-header {
+                padding: 0.5rem;
+            }
+
+            .chat-input {
+                font-size: 0.85rem;
+            }
+
+            .chat-area .message-bubble {
+                padding: 0.5rem;
+                max-w-[90%];
+            }
+
+            .chart-container {
+                max-width: 95%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Main chat container -->
+    <div class="main-container bg-gray-100">
+        <!-- Chat Header -->
+        <div class="chat-header bg-card-bg text-text-dark flex items-center justify-between shadow-md" style="background-color: var(--card-bg); color: var(--text-dark);">
+            <div class="flex items-center">
+                <h1 class="brand-gradient-text">Nicole</h1>
+            </div>
+            <div class="flex space-x-2">
+                <button id="historyBtn" class="p-2 rounded-full hover:bg-gray-200 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat area -->
+        <div id="chatArea" class="chat-area p-4 bg-gray-200 space-y-4">
+        </div>
+
+        <!-- Chat input area -->
+        <div class="chat-input-container flex items-center space-x-2 shadow-inner">
+            <label for="fileUpload" class="cursor-pointer p-3 rounded-full hover:bg-gray-200 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-500">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.122 2.122l7.81-7.81" />
+                </svg>
+                <input id="fileUpload" type="file" class="hidden">
+            </label>
+            <input id="prompt" type="text" class="flex-1 bg-gray-200 rounded-full focus:outline-none chat-input" placeholder="Message Nicole or describe an image">
+            <div class="flex items-center rounded-full bg-gradient-to-r from-purple-700 to-amber-500 text-white shadow-md">
+                <button id="imageBtn" class="p-3 rounded-l-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-700 focus:ring-offset-2 hover:bg-purple-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18.283 5.369a2.25 2.25 0 0 1-3.182-3.182l.926-.927a1.5 1.5 0 0 0 .44-1.06v-1.121c0-.853.64-1.298 1.409-1.409l.409-.05a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909" />
+                    </svg>
+                </button>
+                <span class="bg-white h-6 w-px opacity-50"></span>
+                <button id="sendBtn" class="p-3 rounded-r-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 hover:bg-amber-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                        <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.917a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.405Z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Panel -->
+    <div id="historyPanel" class="history-panel fixed bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 translate-x-full">
+        <div class="p-4 flex flex-col h-full">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-200">
+                <h2 class="text-gray-800">Chat History</h2>
+                <button id="closeHistoryBtn" class="text-gray-500 hover:text-gray-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="historyList" class="mt-4 flex-1 overflow-y-auto space-y-4">
+                <!-- History items will be populated here -->
+            </div>
+            <button id="clearHistoryBtn" class="mt-4 w-full py-2 px-4 rounded-md text-white transition-colors" style="background-color: var(--primary-brand);">
+                Clear History
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Get references to HTML elements
+        const chatArea = document.getElementById('chatArea');
+        const promptInput = document.getElementById('prompt');
+        const sendBtn = document.getElementById('sendBtn');
+        const imageBtn = document.getElementById('imageBtn');
+        const historyBtn = document.getElementById('historyBtn');
+        const historyPanel = document.getElementById('historyPanel');
+        const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+        const historyList = document.getElementById('historyList');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const fileUpload = document.getElementById('fileUpload');
+
+        // State variables
+        let chatHistory = []; // Stores the full history including system/API messages
+        let isWaitingForResponse = false;
+        let isGeneratingImage = false;
+
+        // Constants for localStorage keys and API setup
+        const CHAT_HISTORY_KEY = 'nicoleChatHistory';
+        const CHAT_STATE_KEY = 'nicoleChatState';
+        const API_KEY_KEY = 'geminiApiKey'; // LocalStorage key for API Key
+
+        // --- Core Functions ---
+
+        /**
+         * Persists the current chat history array to localStorage.
+         * IMPORTANT FIX: Filter out transient error messages before saving.
+         */
+        function saveHistory() {
+            // Filter out messages that look like transient errors before saving
+            const savableHistory = chatHistory.filter(message => 
+                !message.text.startsWith('Error: Nicole\'s connection failed')
+            );
+            localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(savableHistory));
+            updateHistoryPanel();
+        }
+
+        /**
+         * Loads chat history from localStorage and updates the UI.
+         */
+        function loadHistory() {
+            const historyJson = localStorage.getItem(CHAT_HISTORY_KEY);
+            if (historyJson) {
+                chatHistory = JSON.parse(historyJson);
+                // Re-render the chat area from the loaded history
+                chatArea.innerHTML = ''; // Clear existing messages
+                chatHistory.forEach(message => {
+                    appendMessage(message.role, message.text, message.uploadedFile, message.sources, false);
+                });
+                // Scroll to the latest message after rendering
+                chatArea.scrollTop = chatArea.scrollHeight;
+            } else {
+                // If no history exists, add the initial welcome message
+                addWelcomeMessage();
+            }
+            // Always update the side panel
+            updateHistoryPanel();
+        }
+
+
+        /**
+         * Adds the initial welcome message if the chat history is empty.
+         */
+        function addWelcomeMessage() {
+            const welcomeMessage = "Hello! I'm Nicole, your interactive mentor for optometry. Let's make you a master optometrist. What topic should we dive into first?";
+            appendMessage('model', welcomeMessage);
+            saveHistory();
+        }
+
+        /**
+         * Converts Markdown text to HTML.
+         * @param {string} markdownText - The markdown string to convert.
+         * @returns {string} The HTML string.
+         */
+        function markdownToHtml(markdownText) {
+            // Escape HTML characters to prevent XSS
+            let html = markdownText
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            // Basic Markdown conversion (simplified for this example)
+            html = html
+                // Block code (multiline or single line)
+                .replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                    // Simple pre/code block
+                    const languageClass = lang ? `language-${lang}` : '';
+                    return `<pre class="bg-gray-100 p-3 rounded-lg overflow-x-auto my-2 text-sm"><code class="${languageClass}">${code.trim()}</code></pre>`;
+                })
+                // Inline code
+                .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm">$1</code>')
+                // Headings
+                .replace(/^###\s*([^\n]+)/gm, '<h3>$1</h3>')
+                .replace(/^##\s*([^\n]+)/gm, '<h2>$1</h2>')
+                .replace(/^#\s*([^\n]+)/gm, '<h1>$1</h1>')
+                // Bold
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+                // Lists (simple conversion)
+                .replace(/^\s*[\*-]\s+([^\n]+)/gm, '<li>$1</li>');
+
+            // Wrap list items in <ul> if they exist
+            if (html.includes('<li>')) {
+                html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+            }
+
+            // Paragraphs and line breaks
+            html = html.replace(/\n\n/g, '<p class="mt-2 mb-4">').replace(/\n/g, '<br>');
+
+
+            // Clean up: remove redundant <p> that might enclose the whole thing
+            if (html.startsWith('<p class="mt-2 mb-4">') && html.endsWith('</p>')) {
+                 html = html.substring(22, html.length - 4);
+            }
+
+            return html;
+        }
+
+        /**
+         * Creates and appends a message bubble to the chat area.
+         * @param {string} role - 'user' or 'model'.
+         * @param {string} text - The message text (in markdown).
+         * @param {string} [uploadedFile=null] - Base64 data of an uploaded image/video.
+         * @param {Array} [sources=[]] - Array of citation objects.
+         * @param {boolean} [shouldSave=true] - Whether to save the message to history.
+         */
+        function appendMessage(role, text, uploadedFile = null, sources = [], shouldSave = true) {
+            const isUser = role === 'user';
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message-bubble', 'flex', isUser ? 'justify-end' : 'justify-start');
+
+            const bubbleClasses = isUser ?
+                'bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-l-xl rounded-br-xl' :
+                'bg-white text-text-dark border border-gray-200 shadow-sm rounded-r-xl rounded-bl-xl';
+
+            // Convert markdown text to HTML
+            const innerHtml = markdownToHtml(text);
+
+            let contentHtml = '';
+            if (uploadedFile) {
+                const mimeType = uploadedFile.startsWith('data:image') ? 'image' : 'video';
+                const mediaElement = mimeType === 'image' ?
+                    `<img src="${uploadedFile}" alt="Uploaded image" class="max-h-64 object-contain rounded-lg shadow-md mb-2 w-full">` :
+                    `<video src="${uploadedFile}" controls class="max-h-64 object-contain rounded-lg shadow-md mb-2 w-full"></video>`;
+                contentHtml += mediaElement;
+            }
+
+            contentHtml += `<div class="p-3 text-sm leading-relaxed">${innerHtml}</div>`;
+
+            if (sources.length > 0) {
+                const sourceList = sources.map((source, index) => `
+                    <li class="mt-1 text-xs truncate">
+                        <a href="${source.uri}" target="_blank" class="${isUser ? 'text-purple-200 hover:text-white' : 'text-purple-600 hover:text-purple-800'} transition-colors" title="${source.title || source.uri}">
+                            <span class="font-semibold mr-1">Source ${index + 1}:</span> ${source.title || source.uri}
+                        </a>
+                    </li>
+                `).join('');
+                contentHtml += `<div class="mt-2 pt-2 border-t ${isUser ? 'border-purple-700' : 'border-gray-300'}">
+                    <p class="text-xs font-semibold ${isUser ? 'text-purple-300' : 'text-gray-500'}">Citations:</p>
+                    <ul class="list-disc ml-4 mt-1 space-y-0.5">
+                        ${sourceList}
+                    </ul>
+                </div>`;
+            }
+
+            messageDiv.innerHTML = `
+                <div class="max-w-3xl lg:max-w-4xl min-w-[150px] p-2 break-words ${bubbleClasses}" style="max-width: 80%;">
+                    ${contentHtml}
+                </div>
+            `;
+
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            // Only save if it's new content and is not explicitly told to skip saving (like on initial load)
+            if (shouldSave) {
+                chatHistory.push({
+                    role: role,
+                    text: text,
+                    uploadedFile: uploadedFile,
+                    sources: sources
+                });
+                saveHistory();
+            }
+        }
+
+        /**
+         * Appends a typing indicator/loading animation.
+         */
+        function appendTypingIndicator() {
+            const indicatorDiv = document.createElement('div');
+            indicatorDiv.id = 'typingIndicator';
+            indicatorDiv.classList.add('flex', 'justify-start');
+
+            indicatorDiv.innerHTML = `
+                <div class="bg-white text-text-dark border border-gray-200 shadow-sm rounded-r-xl rounded-bl-xl p-3 max-w-xs">
+                    <div class="typing-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+            `;
+            chatArea.appendChild(indicatorDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        /**
+         * Removes the typing indicator.
+         */
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+
+        /**
+         * Handles the user's request (text or vision).
+         * @param {boolean} isImagePrompt - True if the user is asking the model to generate an image.
+         */
+        async function handleRequest(isImagePrompt) {
+            const promptText = promptInput.value.trim();
+            const file = fileUpload.files[0];
+
+            if (!promptText && !file && !isImagePrompt) {
+                return; // Do nothing if prompt is empty and no file/image generation request
+            }
+
+            if (isWaitingForResponse || isGeneratingImage) {
+                console.log("Already waiting for a response or image generation in progress.");
+                return;
+            }
+
+            const apiKey = localStorage.getItem(API_KEY_KEY) || ''; // Get API Key from localStorage
+
+            // Determine if it's a vision prompt (has file or is generating image from prompt)
+            const isVisionPrompt = !!file || isImagePrompt;
+
+            let base64ImageData = null;
+            let fileMimeType = null;
+            let fileDataURL = null; // To store in chat history
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    fileDataURL = reader.result; // Store for history
+                    base64ImageData = fileDataURL.split(',')[1];
+                    fileMimeType = file.type;
+                    processRequest(promptText, apiKey, isImagePrompt, base64ImageData, fileMimeType, fileDataURL);
+                };
+                reader.onerror = (error) => {
+                    console.error("Error reading file:", error);
+                    appendMessage('model', 'Error: Could not read the uploaded file.');
+                };
+                reader.readAsDataURL(file);
+                // Clear the file input immediately
+                fileUpload.value = '';
+            } else {
+                // For text-only or image generation requests
+                processRequest(promptText, apiKey, isImagePrompt, base64ImageData, fileMimeType, fileDataURL);
+            }
+
+            // Clear input and set states
+            promptInput.value = '';
+            isWaitingForResponse = true;
+            if (isImagePrompt) {
+                isGeneratingImage = true;
+                sendBtn.innerHTML = `<div class="spinner border-white border-l-purple-300 w-6 h-6"></div>`;
+                imageBtn.innerHTML = `<div class="spinner border-white border-l-purple-300 w-6 h-6"></div>`;
+            } else {
+                sendBtn.innerHTML = `<div class="spinner border-white border-l-purple-300 w-6 h-6"></div>`;
+                appendTypingIndicator();
+            }
+        }
+
+        /**
+         * Internal function to execute the API call after file reading (if applicable).
+         */
+        async function processRequest(promptText, apiKey, isImagePrompt, base64ImageData, fileMimeType, fileDataURL) {
+            // 1. Add user message to UI first
+            appendMessage('user', promptText, fileDataURL);
+
+            const modelName = isImagePrompt ? 'imagen-4.0-generate-001' : 'gemini-2.5-flash-preview-09-2025';
+
+            try {
+                let apiUrl;
+                let payload;
+
+                if (isImagePrompt) {
+                    // --- Image Generation (Imagen) ---
+                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:predict?key=${apiKey}`;
+                    payload = {
+                        instances: [{
+                            prompt: promptText
+                        }],
+                        parameters: {
+                            "sampleCount": 1
+                        }
+                    };
+                } else {
+                    // --- Text/Vision Generation (Gemini) ---
+                    apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+                    let contents = [{
+                        role: "user",
+                        parts: [{
+                            text: promptText
+                        }]
+                    }];
+
+                    if (base64ImageData) {
+                        // Add image data for vision models
+                        contents[0].parts.push({
+                            inlineData: {
+                                mimeType: fileMimeType,
+                                data: base64ImageData
+                            }
+                        });
+                    }
+
+                    // System instruction to set the persona
+                    const systemPrompt = "You are Nicole, an interactive and supportive mentor for students studying optometry. Your goal is to help the user master optometry concepts and turn any idea or concept into a viable business opportunity within the optometry field. Be friendly, encouraging, and highly knowledgeable. When presenting business ideas, ensure they are relevant to optometry and well-structured.";
+
+                    payload = {
+                        contents: contents,
+                        tools: [{
+                            "google_search": {}
+                        }], // Enable grounding for up-to-date info
+                        systemInstruction: {
+                            parts: [{
+                                text: systemPrompt
+                            }]
+                        }
+                    };
+                }
+
+                const fetchOptions = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                };
+
+                let response;
+                let retries = 0;
+                const maxRetries = 3;
+                let delay = 1000; // 1 second
+
+                // Exponential backoff for API calls
+                while (retries < maxRetries) {
+                    try {
+                        response = await fetch(apiUrl, fetchOptions);
+                        if (response.ok) {
+                            break; // Success
+                        } else if (response.status === 429 && retries < maxRetries - 1) {
+                            // Too many requests (throttling), retry
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; // Double the delay
+                            retries++;
+                        } else {
+                            // Other errors (400, 500 etc)
+                            throw new Error(`HTTP Error calling ${modelName}: ${response.status} ${response.statusText}`);
+                        }
+                    } catch (error) {
+                        if (retries === maxRetries - 1 || error.message.includes('HTTP Error')) {
+                             // This is the final attempt or a non-retryable error
+                             throw error;
+                        }
+                        // Retry for network issues or 429
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                        retries++;
+                    }
+                }
+
+                if (!response || !response.ok) {
+                    throw new Error(`Final connection failed after ${maxRetries} attempts.`);
+                }
+
+                const result = await response.json();
+
+                if (isImagePrompt) {
+                    // --- Handle Image Generation Response ---
+                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                        const base64Data = result.predictions[0].bytesBase64Encoded;
+                        const imageUrl = `data:image/png;base64,${base64Data}`;
+                        appendMessage('model', `Here is the image I generated for: "${promptText}"`, imageUrl);
+                    } else {
+                        console.error("Image generation failed:", result);
+                        appendMessage('model', 'Error: I couldn\'t generate an image for that prompt. The model response was invalid.');
+                    }
+                } else {
+                    // --- Handle Text/Vision Response ---
+                    const candidate = result.candidates?.[0];
+
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        let text = candidate.content.parts[0].text;
+                        let sources = [];
+                        const groundingMetadata = candidate.groundingMetadata;
+
+                        if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                            sources = groundingMetadata.groundingAttributions
+                                .map(attribution => ({
+                                    uri: attribution.web?.uri,
+                                    title: attribution.web?.title,
+                                }))
+                                .filter(source => source.uri && source.title);
+                        }
+                        appendMessage('model', text, null, sources);
+                    } else {
+                        console.error("API response content missing:", result);
+                        appendMessage('model', 'Error: I received a response, but the content was empty or structured incorrectly. Please try again.');
+                    }
+                }
+
+            } catch (error) {
+                console.error("Final API Error:", error);
+                const errorMessage = `Error: Nicole's connection failed. The server said: HTTP Error calling ${modelName}: ${error.message}`;
+                // Append without saving to history
+                appendMessage('model', errorMessage, null, [], false); 
+            } finally {
+                // Reset UI elements
+                isWaitingForResponse = false;
+                isGeneratingImage = false;
+                removeTypingIndicator();
+                sendBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.917H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.917a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.405Z" />
+                </svg>`;
+                imageBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18.283 5.369a2.25 2.25 0 0 1-3.182-3.182l.926-.927a1.5 1.5 0 0 0 .44-1.06v-1.121c0-.853.64-1.298 1.409-1.409l.409-.05a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909" />
+                    </svg>`;
+            }
+        }
+
+        // --- History Panel Functions ---
+
+        /**
+         * Toggles the visibility of the history panel.
+         */
+        function toggleHistoryPanel() {
+            historyPanel.classList.toggle('translate-x-full');
+            updateHistoryPanel();
+        }
+
+        /**
+         * Updates the list of messages in the history side panel.
+         */
+        function updateHistoryPanel() {
+            historyList.innerHTML = ''; // Clear existing list
+
+            chatHistory.forEach(message => {
+                const isUser = message.role === 'user';
+                let text = message.text;
+                let title = isUser ? 'You' : 'Nicole';
+
+                // Truncate message text for preview
+                const preview = text.length > 50 ? text.substring(0, 50) + '...' : text;
+
+                const historyItem = document.createElement('div');
+                historyItem.classList.add(
+                    'history-item',
+                    'p-3',
+                    'rounded-lg',
+                    'cursor-pointer',
+                    'shadow-sm',
+                    isUser ? 'border-r-4 border-amber-500' : 'border-l-4 border-purple-700'
+                );
+                historyItem.innerHTML = `
+                    <p class="text-xs font-semibold ${isUser ? 'text-amber-700' : 'text-purple-700'}">${title}:</p>
+                    <p class="text-sm text-gray-700 mt-1">${preview}</p>
+                `;
+                // Add event listener to jump to the message? (Complex to implement accurately with scrolling, skipping for now)
+
+                historyList.appendChild(historyItem);
+            });
+
+            if (chatHistory.length === 0) {
+                historyList.innerHTML = `<p class="text-center text-gray-500 mt-8">Start a conversation to see history here.</p>`;
+            }
+        }
+
+        /**
+         * Clears all chat history from state and localStorage.
+         */
+        function clearHistory() {
+            chatHistory = []; // Clear state
+            localStorage.removeItem(CHAT_HISTORY_KEY); // Clear localStorage
+            localStorage.removeItem(CHAT_STATE_KEY);
+            chatArea.innerHTML = ''; // Clear chat UI
+            addWelcomeMessage(); // Restart the conversation
+            updateHistoryPanel(); // Update panel UI
+            toggleHistoryPanel(); // Close panel
+        }
+
+        // --- Event Listeners and Initialization ---
+
+        // Attach event handlers
+        sendBtn.addEventListener('click', () => handleRequest(false));
+        sendBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleRequest(false); });
+        imageBtn.addEventListener('click', () => handleRequest(true));
+        imageBtn.addEventListener('touchstart', (e) => { e.preventDefault(); handleRequest(true); });
+        promptInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleRequest(false);
+            }
+        });
+        historyBtn.addEventListener('click', toggleHistoryPanel);
+        historyBtn.addEventListener('touchstart', toggleHistoryPanel); // Add touch support
+        closeHistoryBtn.addEventListener('click', toggleHistoryPanel);
+        closeHistoryBtn.addEventListener('touchstart', toggleHistoryPanel); // Add touch support
+        clearHistoryBtn.addEventListener('click', clearHistory);
+
+        // Swipe to open/close history panel on mobile
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            if (touchStartX - touchEndX > 50 && historyPanel.classList.contains('translate-x-full')) {
+                toggleHistoryPanel(); // Swipe left to open
+            } else if (touchEndX - touchStartX > 50 && !historyPanel.classList.contains('translate-x-full')) {
+                toggleHistoryPanel(); // Swipe right to close
+            }
+        });
+
+        // Load chat history when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHistory();
+        });
+    </script>
+</body>
+
+</html>
