@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: nicole-web
+    env: python
+    plan: free
+    repo: https://github.com/<your-org>/<your-repo>
+    branch: main
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "gunicorn nicole_project.wsgi:application --workers 2 --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generate: true
+    postDeployCommand: "python manage.py migrate --noinput"
+
+databases:
+  - name: nicole-db
+    plan: starter
