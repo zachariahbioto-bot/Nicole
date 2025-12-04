@@ -24,6 +24,7 @@ from django.http import HttpResponse
 import json
 import time
 from chat.rate_limit import RateLimiter
+
 # ==================== AUTH VIEWS ====================
 
 def signup_view(request):
@@ -141,65 +142,40 @@ def process_chat_message(request):
         """
 
         api_key = settings.GEMINI_API_KEY
+        
+        # Check if API key exists
+        if not api_key:
+            return JsonResponse({'error': 'API key not configured. Please contact administrator.'}, status=500)
 
         if is_image_request:
-            # --- IMAGE GENERATION ---
-            model = "imagen-3.0-generate-001"
-            api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:predict?key={api_key}"
-            
-            payload = {
-                "instances": [{
-                    "prompt": f"A professional black and white diagram for optometry education: {prompt}"
-                }],
-                "parameters": {
-                    "sampleCount": 1,
-                    "aspectRatio": "1:1"
-                }
-            }
-            
-            response = requests.post(api_url, json=payload, timeout=30)
-            response.raise_for_status()
-            
-            result = response.json()
-            if result.get('predictions') and result['predictions'][0].get('bytesBase64Encoded'):
-                base64_data = result['predictions'][0]['bytesBase64Encoded']
-                nicole_text = f"I've generated a diagram for: {prompt}"
-                
-                Message.objects.create(
-                    session=session,
-                    text_content=nicole_text,
-                    is_user=False,
-                    message_type='image'
-                )
-                
-                # Log usage
-                elapsed = time.time() - start_time
-                RateLimiter.log_api_usage(request.user, 'chat', elapsed, 200)
-                
-                return JsonResponse({
-                    'text': nicole_text,
-                    'image_data': base64_data,
-                    'session_id': session.session_id
-                })
-            else:
-                raise Exception('Image generation failed')
+            return JsonResponse({'error': 'Image generation temporarily disabled'}, status=400)
         
         else:
-            # --- TEXT GENERATION ---
-            model = "gemini-2.5-flash-preview-09-2025"
+            # --- TEXT GENERATION - Use stable model ---
+            model = "gemini-1.5-flash"  # Changed to stable model
             api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
             
             payload = {
                 "contents": conversation_for_api,
-                "tools": [{
-                    "google_search": {}
-                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "topK": 40,
+                    "topP": 0.95,
+                    "maxOutputTokens": 2048,
+                },
                 "systemInstruction": {
                     "parts": [{"text": system_prompt}]
                 }
             }
             
             response = requests.post(api_url, json=payload, timeout=30)
+            
+            # Better error handling
+            if response.status_code == 403:
+                return JsonResponse({
+                    'error': 'API key is invalid or doesn\'t have access to Gemini API. Please check your API key in Render environment variables.'
+                }, status=403)
+            
             response.raise_for_status()
             
             result = response.json()
@@ -209,7 +185,7 @@ def process_chat_message(request):
             if not generated_text:
                 raise Exception('Empty response from API')
             
-            # Extract sources/citations
+            # Extract sources/citations (if available)
             sources = []
             grounding_metadata = result.get('candidates', [{}])[0].get('groundingMetadata')
             if grounding_metadata and grounding_metadata.get('groundingAttributions'):
@@ -248,7 +224,10 @@ def process_chat_message(request):
     except requests.exceptions.RequestException as e:
         elapsed = time.time() - start_time
         RateLimiter.log_api_usage(request.user, 'chat', elapsed, 502)
-        return JsonResponse({'error': f'API Error: {str(e)}'}, status=502)
+        error_detail = str(e)
+        if '403' in error_detail:
+            return JsonResponse({'error': 'API authentication failed. Please verify your Gemini API key is correct and has proper permissions.'}, status=502)
+        return JsonResponse({'error': f'API Error: {error_detail}'}, status=502)
     except Exception as e:
         print(f"Error: {str(e)}")
         elapsed = time.time() - start_time
@@ -309,6 +288,7 @@ def delete_session(request, session_id):
         return JsonResponse({'message': 'Session deleted'})
     except ChatSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
+
 def profile_view(request):
     """Handle user profile page."""
     if request.method == 'POST':
@@ -337,7 +317,6 @@ def change_password_view(request):
             user = form.save()
             update_session_auth_hash(request, user)
             return redirect('profile')
-            messages.success(request, 'Password changed successfully!')
     else:
         form = PasswordChangeFormCustom(request.user)
     
@@ -392,11 +371,10 @@ def export_chat_pdf(request, session_id):
         session = ChatSession.objects.get(session_id=session_id, user=request.user)
         messages = session.messages.all().order_by('timestamp')
 
-        # Create PDF
         pdf_buffer = io.BytesIO()
         doc = SimpleDocTemplate(pdf_buffer, pagesize=letter)
         story = []
- # Styles
+
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle(
             'CustomTitle',
@@ -406,15 +384,14 @@ def export_chat_pdf(request, session_id):
             spaceAfter=12
         )
         normal_style = styles['Normal']
-# Title
+
         story.append(Paragraph(f"Nicole Chat: {session.title}", title_style))
         story.append(Spacer(1, 0.3 * inch))
 
-        # Metadata
         meta_text = f"<b>Date:</b> {datetime.now().strftime('%B %d, %Y')}<br/><b>User:</b> {request.user.username}<br/><b>Messages:</b> {len(messages)}"
         story.append(Paragraph(meta_text, normal_style))
         story.append(Spacer(1, 0.3 * inch))
- # Messages
+
         for msg in messages:
             sender = "You" if msg.is_user else "Nicole"
             sender_style = ParagraphStyle(
