@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Nicole</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #FDFBF7 0%, #F5F3EF 100%);
+        }
+        h1, h2, h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 700;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl mx-auto">
+            <!-- Back Button -->
+            <a href="{% url 'nicole_chat' %}" class="inline-flex items-center gap-2 mb-8 text-purple-700 hover:text-purple-900 font-semibold">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                </svg>
+                Back to Chat
+            </a>
+
+            <!-- Header -->
+            <div class="card mb-8">
+                <div class="flex items-center gap-6 mb-6">
+                    <div class="w-20 h-20 rounded-full bg-gradient-to-br from-purple-700 to-amber-500 flex items-center justify-center">
+                        <span class="text-white text-2xl font-bold">{{ user.username|first|upper }}</span>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl mb-2">{{ user.get_full_name|default:user.username }}</h1>
+                        <p class="text-gray-600">{{ user.email }}</p>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+                        <div class="text-3xl font-bold text-purple-700">{{ user_sessions }}</div>
+                        <div class="text-sm text-gray-600">Chat Sessions</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-amber-50 to-amber-100 p-4 rounded-lg">
+                        <div class="text-3xl font-bold text-amber-700">{{ total_messages }}</div>
+                        <div class="text-sm text-gray-600">Total Messages</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
+                        <div class="text-3xl font-bold text-blue-700">{{ user.date_joined|date:"M d" }}</div>
+                        <div class="text-sm text-gray-600">Member Since</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Profile -->
+            <div class="card mb-8">
+                <h2 class="text-2xl mb-6">Edit Profile</h2>
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+                        {{ form.username }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                        {{ form.email }}
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
+                            {{ form.last_name }}
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-gradient-to-r from-purple-700 to-amber-500 text-white font-semibold py-3 rounded-lg hover:from-purple-800 hover:to-amber-600 transition">
+                        Save Changes
+                    </button>
+                </form>
+            </div>
+
+            <!-- Security Section -->
+            <div class="card mb-8">
+                <h2 class="text-2xl mb-6">Security</h2>
+                <div class="space-y-4">
+                    <a href="{% url 'change_password' %}" class="block p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        <div class="font-semibold text-gray-900">Change Password</div>
+                        <div class="text-sm text-gray-600">Update your password regularly for security</div>
+                    </a>
+                    <a href="{% url 'delete_account' %}" class="block p-4 border border-red-300 rounded-lg hover:bg-red-50 transition">
+                        <div class="font-semibold text-red-700">Delete Account</div>
+                        <div class="text-sm text-gray-600">Permanently delete your account and all data</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

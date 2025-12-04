@@ -9,31 +9,38 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- IMPORTANT: ADD YOUR API KEY HERE ---
-# NOTE: Replace 'YOUR_GEMINI_API_KEY_HERE' with your actual key!
-GEMINI_API_KEY = "AIzaSyBrpuk3NwxnVjNLe9h9JO0QUo0t6TNNt_A"
-# ----------------------------------------
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key')
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# Add this section after ALLOWED_HOSTS
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-x87xzop-%u$@8jdcbrl7+bq(@kp@(*tc9n^!-cf5y+xn^#v))+"
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://localhost:8000',
+    'https://127.0.0.1:8000',
+]
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+CSRF_COOKIE_SECURE = False  # Set to True only in production with HTTPS
+CSRF_COOKIE_HTTPONLY = False  # Must be False so JavaScript can read the token
+CSRF_COOKIE_SAMESITE = 'Lax'
 
-ALLOWED_HOSTS = ['*']
+# Session settings
+SESSION_COOKIE_SECURE = False  # Set to True only in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 
-
-# Application definition
-
+# ... rest of settings stays the same
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -125,3 +132,7 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+#Login redirect
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'nicole_chat'
